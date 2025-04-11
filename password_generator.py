@@ -39,7 +39,9 @@ def generate_password(length, include_lowercase, include_uppercase, include_digi
     if not characters:
         raise ValueError("At least one character type must be selected.")
 
-    password = ''.join(random.choice(characters) for i in range(length))
+    password = ""
+    for i in range(length):
+        password += random.choice(characters)
     return password
 
 print("Your password is:", generate_password(password_length, include_lowercase, include_uppercase, include_digits, include_special_characters))
