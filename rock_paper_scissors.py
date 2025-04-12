@@ -50,6 +50,5 @@ while True:
             print("Sorry! You lost the game.")
         elif user_score == computer_score:
             print("It's a tie game!")
-        else:
-            print("Thanks for playing!")
+        print("Thanks for playing!")
         break
