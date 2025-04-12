@@ -14,8 +14,9 @@ while True:
 
     if user_input == computer_input:
         print("It's a tie!")
+        
     elif user_input == "rock":
-        if computer_input == "scissorc":
+        if computer_input == "scissors": 
             print("You win!")
             user_score += 1
         else:
@@ -47,6 +48,8 @@ while True:
             print("Congratulations! You won the game!")
         elif user_score < computer_score:
             print("Sorry! You lost the game.")
+        elif user_score == computer_score:
+            print("It's a tie game!")
         else:
             print("Thanks for playing!")
         break
