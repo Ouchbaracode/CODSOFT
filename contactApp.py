@@ -48,9 +48,9 @@ class DatabaseConnection:
             print(f"Error executing query: {e}")
             return None if query.strip().lower().startswith("select") else False
 
-def insert_contact(db, name, phone, email):
-    sql = "INSERT INTO contacts (name, phone, email) VALUES (%s, %s, %s)"
-    val = (name, phone, email)
+def insert_contact(db, name, phone, email, address):
+    sql = "INSERT INTO contacts (name, phone, email, address) VALUES (%s, %s, %s, %s)"
+    val = (name, phone, email, address)
     if db.execute_query(sql, val):
         return db.cursor.lastrowid
     return None
@@ -61,8 +61,8 @@ def load_contacts(db):
     return db.execute_query(sql)
 
 def search_contact(db, search_term):
-    sql = "SELECT * FROM contacts WHERE name LIKE %s OR email LIKE %s OR phone LIKE %s"
-    val = (f"%{search_term}%", f"%{search_term}%", f"%{search_term}%")
+    sql = "SELECT * FROM contacts WHERE name LIKE %s OR email LIKE %s OR phone LIKE %s OR address LIKE %s"
+    val = (f"%{search_term}%", f"%{search_term}%", f"%{search_term}%", f"%{search_term}%")
     return db.execute_query(sql, val)
 
 def delete_contact(db, contact_id):
@@ -72,8 +72,8 @@ def delete_contact(db, contact_id):
         return True
     return False 
 
-def update_contact(db, contact_id, name=None, phone=None, email=None):
-    result = db.execute_query("SELECT name, phone, email FROM contacts WHERE id = %s", (contact_id,))
+def update_contact(db, contact_id, name=None, phone=None, email=None, address=None):
+    result = db.execute_query("SELECT name, phone, email, address FROM contacts WHERE id = %s", (contact_id,))
     current_data = result[0] if result else None
 
     if not current_data:
@@ -85,9 +85,11 @@ def update_contact(db, contact_id, name=None, phone=None, email=None):
         phone = current_data[1]
     if email is None:
         email = current_data[2]
+    if address is None:
+        address = current_data[3]
 
-    sql = "UPDATE contacts SET name = %s, phone = %s, email = %s WHERE id = %s"
-    val = (name, phone, email, contact_id)
+    sql = "UPDATE contacts SET name = %s, phone = %s, email = %s, address = %s WHERE id = %s"
+    val = (name, phone, email, address, contact_id)
 
     return db.execute_query(sql, val)
 
@@ -175,6 +177,11 @@ class ContactApp(QWidget):
         self.email_input.setPlaceholderText("Enter email address")
         contact_layout.addWidget(self.email_input, 2, 1, 1, 2)
         
+        contact_layout.addWidget(QLabel("Address:"), 3, 0)
+        self.address_input = QLineEdit()
+        self.address_input.setPlaceholderText("Enter physical address")
+        contact_layout.addWidget(self.address_input, 3, 1, 1, 2)
+        
         form_layout.addWidget(contact_group)
         
         button_layout = QHBoxLayout()
@@ -213,7 +220,7 @@ class ContactApp(QWidget):
         search_layout.addWidget(search_label)
         
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search by name, phone, or email...")
+        self.search_input.setPlaceholderText("Search by name, phone, email or address...")
         self.search_input.textChanged.connect(self.search_contacts)
         search_layout.addWidget(self.search_input)
         
@@ -241,6 +248,7 @@ class ContactApp(QWidget):
         name = self.name_input.text().strip()
         phone = self.phone_input.text().strip()
         email = self.email_input.text().strip()
+        address = self.address_input.text().strip()
 
         if not name or not phone or not email:
             QMessageBox.warning(self, "Input Error", "Please fill in Name, Phone, and Email fields.")
@@ -248,7 +256,7 @@ class ContactApp(QWidget):
 
         if self.db:
             try:
-                insert_contact(self.db, name, phone, email)
+                insert_contact(self.db, name, phone, email, address)
                 QMessageBox.information(self, "Success", "Contact added successfully!")
                 self.status_label.setText(f"Added contact: {name}")
                 self.clear_inputs()
@@ -268,9 +276,9 @@ class ContactApp(QWidget):
                 contacts = load_contacts(self.db)
                 if contacts:
                     for contact in contacts:
-                        item_text = f"{contact[0]} | {contact[1]} | {contact[2]} | {contact[3]}"
+                        item_text = f"{contact[0]} | {contact[1]} | {contact[2]} | {contact[3]} | {contact[4]}"
                         item = QListWidgetItem(item_text)
-                        item.setToolTip(f"ID: {contact[0]}\nName: {contact[1]}\nPhone: {contact[2]}\nEmail: {contact[3]}")
+                        item.setToolTip(f"ID: {contact[0]}\nName: {contact[1]}\nPhone: {contact[2]}\nEmail: {contact[3]}\nAddress: {contact[4]}")
                         self.contact_list.addItem(item)
                     self.status_label.setText(f"Loaded {len(contacts)} contacts")
                 else:
@@ -284,12 +292,13 @@ class ContactApp(QWidget):
         item_text = item.text()
         parts = item_text.split(" | ")
 
-        if len(parts) == 4:
+        if len(parts) == 5:
             try:
                 self.selected_contact_id = int(parts[0])
                 self.name_input.setText(parts[1])
                 self.phone_input.setText(parts[2])
                 self.email_input.setText(parts[3])
+                self.address_input.setText(parts[4])
                 self.status_label.setText(f"Selected contact: {parts[1]}")
             except (ValueError, IndexError) as e:
                 QMessageBox.warning(self, "Data Error", f"Could not parse contact details from list item:\n{item_text}\nError: {e}")
@@ -316,9 +325,9 @@ class ContactApp(QWidget):
                 results = search_contact(self.db, search_term)
                 if results:
                     for contact in results:
-                        item_text = f"{contact[0]} | {contact[1]} | {contact[2]} | {contact[3]}"
+                        item_text = f"{contact[0]} | {contact[1]} | {contact[2]} | {contact[3]} | {contact[4]}"
                         item = QListWidgetItem(item_text)
-                        item.setToolTip(f"ID: {contact[0]}\nName: {contact[1]}\nPhone: {contact[2]}\nEmail: {contact[3]}")
+                        item.setToolTip(f"ID: {contact[0]}\nName: {contact[1]}\nPhone: {contact[2]}\nEmail: {contact[3]}\nAddress: {contact[4]}")
                         self.contact_list.addItem(item)
                     self.status_label.setText(f"Found {len(results)} contacts matching '{search_term}'")
                 else:
@@ -338,8 +347,9 @@ class ContactApp(QWidget):
         name = self.name_input.text().strip()
         phone = self.phone_input.text().strip()
         email = self.email_input.text().strip()
+        address = self.address_input.text().strip()
 
-        if not name and not phone and not email:
+        if not name and not phone and not email and not address:
             QMessageBox.warning(self, "Input Error", "Please enter new details for the contact.")
             return
 
@@ -350,7 +360,8 @@ class ContactApp(QWidget):
                     self.selected_contact_id,
                     name,
                     phone,
-                    email
+                    email,
+                    address
                 )
                 QMessageBox.information(self, "Success", "Contact updated successfully!")
                 self.status_label.setText(f"Updated contact: {name}")
@@ -395,6 +406,7 @@ class ContactApp(QWidget):
         self.name_input.clear()
         self.phone_input.clear()
         self.email_input.clear()
+        self.address_input.clear()
         self.selected_contact_id = None
         self.status_label.setText("Form cleared")
 
